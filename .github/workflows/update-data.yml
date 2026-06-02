@@ -2,7 +2,7 @@ name: Update ASA Servers Data
 
 on:
   schedule:
-    - cron: '0 * * * *'  # 每小时的第 0 分钟自动执行 (UTC 时间)
+    - cron: '*/5 * * * *'  # 每小时的第 0 分钟自动执行 (UTC 时间)
   workflow_dispatch:      # 允许你在 GitHub 界面上手动点击按钮触发更新
 
 jobs:
@@ -21,7 +21,7 @@ jobs:
           import json
           import os
 
-          url = 'https://cdn2.arkdedicated.com/servers/asa/officialserverlist.json'
+          url = 'https://cdn2.arkdedicated.com/servers/asa/unofficialserverlist.json'
           print("正在下载官方原始数据...")
           
           req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
