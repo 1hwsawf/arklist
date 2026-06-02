@@ -21,7 +21,7 @@ jobs:
           import json
           import os
 
-          url = 'https://cdn2.arkdedicated.com/servers/asa/unofficialserverlist.json'
+          url = 'https://cdn2.arkdedicated.com/servers/asa/officialserverlist.json'
           print("正在下载官方原始数据...")
           
           req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
