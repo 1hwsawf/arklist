@@ -2,14 +2,14 @@ name: Update ASA Servers Data
 
 on:
   schedule:
-    - cron: '0 * * * *'  # 每小时执行一次
-  workflow_dispatch:      # 允许手动触发
+    - cron: '0 * * * *'  # 每小时的第 0 分钟自动执行 (UTC 时间)
+  workflow_dispatch:      # 允许你在 GitHub 界面上手动点击按钮触发更新
 
 jobs:
   update-data:
     runs-on: ubuntu-latest
     permissions:
-      contents: write
+      contents: write     # 赋予写权限，允许 Actions 把压缩后的 JSON 推送回仓库
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
@@ -22,16 +22,15 @@ jobs:
           import os
 
           url = 'https://cdn2.arkdedicated.com/servers/asa/unofficialserverlist.json'
-          print("正在从官方 API 下载 50MB 的原始数据...")
+          print("正在下载官方原始数据...")
           
-          # 伪装成浏览器请求，防止被官方防火墙拦截
           req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
           
           try:
               with urllib.request.urlopen(req) as response:
                   data = json.loads(response.read().decode('utf-8'))
               
-              # 处理数据结构：确保我们拿到的是列表 (Array)
+              # 自动解包（兼容列表外嵌套对象的情况）
               if isinstance(data, dict):
                   for k, v in data.items():
                       if isinstance(v, list):
@@ -41,9 +40,9 @@ jobs:
               if not isinstance(data, list):
                   data = []
 
-              print(f"成功获取！共找到 {len(data)} 个服务器，开始进行数据清洗...")
+              print(f"下载成功！共找到 {len(data)} 个服务器，开始进行针对性清洗...")
               
-              # 【核心压缩逻辑】只保留前端网页需要的字段，丢弃其他无用的大字段
+              # 【核心逻辑】严格对照你提供的 JSON 键名进行精准提取，抛弃几万条记录里的冗余字段
               output = []
               for s in data:
                   output.append({
@@ -55,20 +54,20 @@ jobs:
                       "ServerPing": s.get("ServerPing", 999),
                       "IP": s.get("IP", ""),
                       "Port": s.get("Port", 0),
-                      "HasPassword": s.get("HasPassword", False),
+                      "HasPassword": True if s.get("HasPassword") else False,
                       "BuildId": s.get("BuildId", 0),
                       "MinorBuildId": s.get("MinorBuildId", 0)
                   })
                   
-              # 使用 separators=(',', ':') 移除 JSON 中的空格和换行，达到极限压缩
+              # separators=(',', ':') 用于去除 JSON 中所有的空格和换行，实现体积极限压缩
               with open('servers.json', 'w', encoding='utf-8') as f:
                   json.dump(output, f, separators=(',', ':'))
                   
               new_size = os.path.getsize('servers.json') / (1024 * 1024)
-              print(f"数据清洗完毕！压缩后的新文件大小为: {new_size:.2f} MB")
+              print(f"清洗完毕！文件已从 50MB 瘦身至: {new_size:.2f} MB，网页可以流畅解析了！")
               
           except Exception as e:
-              print(f"处理过程中发生错误: {e}")
+              print(f"执行出错: {e}")
               exit(1)
 
       - name: Commit and push if changed
@@ -76,5 +75,5 @@ jobs:
           git config --global user.name 'GitHub Actions Bot'
           git config --global user.email 'actions@github.com'
           git add servers.json
-          git commit -m "Auto-update and compress server data" || exit 0
+          git commit -m "自动同步并压缩全网ASA服务器数据" || exit 0
           git push
