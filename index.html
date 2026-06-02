@@ -3,765 +3,153 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ARK 服务器搜索</title>
-  <style>
-    :root {
-      --bg: #0f1419;
-      --surface: #1a2332;
-      --surface2: #243044;
-      --border: #2d3f56;
-      --text: #e8edf4;
-      --muted: #8b9cb3;
-      --accent: #3b82f6;
-      --accent-hover: #2563eb;
-      --pve: #22c55e;
-      --pvp: #ef4444;
-      --warn: #f59e0b;
-    }
-
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-
-    body {
-      font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
-      background: var(--bg);
-      color: var(--text);
-      min-height: 100vh;
-      line-height: 1.5;
-    }
-
-    header {
-      background: linear-gradient(135deg, #1e3a5f 0%, #0f1419 100%);
-      border-bottom: 1px solid var(--border);
-      padding: 1.25rem 1.5rem;
-    }
-
-    header h1 {
-      font-size: 1.35rem;
-      font-weight: 600;
-      margin-bottom: 0.25rem;
-    }
-
-    header p { color: var(--muted); font-size: 0.875rem; }
-
-    .container { max-width: 1600px; margin: 0 auto; padding: 1rem 1.5rem 2rem; }
-
-    .load-zone {
-      border: 2px dashed var(--border);
-      border-radius: 12px;
-      padding: 2rem;
-      text-align: center;
-      background: var(--surface);
-      margin-bottom: 1rem;
-      transition: border-color 0.2s, background 0.2s;
-    }
-
-    .load-zone.loaded { padding: 0.75rem 1rem; text-align: left; }
-
-    .load-zone button, .toolbar button, .toolbar select, .toolbar input {
-      font: inherit;
-    }
-
-    .btn {
-      background: var(--accent);
-      color: #fff;
-      border: none;
-      border-radius: 8px;
-      padding: 0.5rem 1rem;
-      cursor: pointer;
-      font-size: 0.875rem;
-      transition: background 0.15s;
-    }
-
-    .btn:hover { background: var(--accent-hover); }
-    .btn.secondary { background: var(--surface2); color: var(--text); }
-    .btn.secondary:hover { background: #2f425c; }
-
-    .file-meta {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 1rem;
-      align-items: center;
-      font-size: 0.875rem;
-    }
-
-    .file-meta .stat {
-      background: var(--surface2);
-      padding: 0.25rem 0.6rem;
-      border-radius: 6px;
-    }
-
-    .filters {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-      gap: 0.75rem;
-      margin-bottom: 1rem;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 1rem;
-    }
-
-    .filter-group label {
-      display: block;
-      font-size: 0.75rem;
-      color: var(--muted);
-      margin-bottom: 0.25rem;
-      text-transform: uppercase;
-      letter-spacing: 0.04em;
-    }
-
-    .filter-group input,
-    .filter-group select {
-      width: 100%;
-      background: var(--surface2);
-      border: 1px solid var(--border);
-      color: var(--text);
-      border-radius: 8px;
-      padding: 0.45rem 0.6rem;
-      font-size: 0.875rem;
-    }
-
-    .filter-group input:focus,
-    .filter-group select:focus {
-      outline: none;
-      border-color: var(--accent);
-    }
-
-    .search-wide { grid-column: 1 / -1; }
-
-    .toolbar {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 0.75rem;
-      align-items: center;
-      justify-content: space-between;
-      margin-bottom: 0.75rem;
-    }
-
-    .result-count { color: var(--muted); font-size: 0.875rem; }
-
-    .table-wrap {
-      overflow: auto;
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      background: var(--surface);
-      max-height: calc(100vh - 340px);
-    }
-
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 0.8125rem;
-    }
-
-    th, td {
-      padding: 0.55rem 0.75rem;
-      text-align: left;
-      border-bottom: 1px solid var(--border);
-      white-space: nowrap;
-    }
-
-    th {
-      position: sticky;
-      top: 0;
-      background: #1c2838;
-      z-index: 2;
-      cursor: pointer;
-      user-select: none;
-      font-weight: 600;
-    }
-
-    th:hover { background: #243347; }
-
-    th .sort-icon {
-      opacity: 0.4;
-      margin-left: 0.25rem;
-      font-size: 0.7rem;
-    }
-
-    th.sorted .sort-icon { opacity: 1; color: var(--accent); }
-
-    tr:hover td { background: rgba(59, 130, 246, 0.06); }
-
-    .badge {
-      display: inline-block;
-      padding: 0.1rem 0.45rem;
-      border-radius: 4px;
-      font-size: 0.7rem;
-      font-weight: 600;
-    }
-
-    .badge.pve { background: rgba(34, 197, 94, 0.2); color: var(--pve); }
-    .badge.pvp { background: rgba(239, 68, 68, 0.2); color: var(--pvp); }
-    .badge.lock { background: rgba(245, 158, 11, 0.2); color: var(--warn); }
-
-    .players-bar {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.35rem;
-    }
-
-    .players-bar .bar {
-      width: 48px;
-      height: 6px;
-      background: var(--surface2);
-      border-radius: 3px;
-      overflow: hidden;
-    }
-
-    .players-bar .fill {
-      height: 100%;
-      background: var(--accent);
-      border-radius: 3px;
-    }
-
-    .ping-good { color: var(--pve); }
-    .ping-mid { color: var(--warn); }
-    .ping-bad { color: var(--pvp); }
-
-    .empty-state {
-      text-align: center;
-      padding: 3rem 1rem;
-      color: var(--muted);
-    }
-
-    .detail-btn {
-      background: none;
-      border: 1px solid var(--border);
-      color: var(--muted);
-      border-radius: 4px;
-      padding: 0.15rem 0.4rem;
-      cursor: pointer;
-      font-size: 0.7rem;
-    }
-
-    .detail-btn:hover { border-color: var(--accent); color: var(--accent); }
-
-    dialog {
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      background: var(--surface);
-      color: var(--text);
-      padding: 0;
-      max-width: 640px;
-      width: 92vw;
-    }
-
-    dialog::backdrop { background: rgba(0, 0, 0, 0.6); }
-
-    .dialog-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 1rem 1.25rem;
-      border-bottom: 1px solid var(--border);
-    }
-
-    .dialog-body {
-      padding: 1rem 1.25rem;
-      max-height: 60vh;
-      overflow: auto;
-    }
-
-    .detail-grid {
-      display: grid;
-      grid-template-columns: 140px 1fr;
-      gap: 0.35rem 1rem;
-      font-size: 0.8125rem;
-    }
-
-    .detail-grid dt { color: var(--muted); }
-    .detail-grid dd { word-break: break-all; }
-
-    .hidden { display: none !important; }
-
-    .pagination {
-      display: flex;
-      flex-wrap: wrap;
-      align-items: center;
-      justify-content: center;
-      gap: 0.35rem;
-      margin-top: 1rem;
-      padding: 0.75rem;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-    }
-
-    .pagination .page-info {
-      color: var(--muted);
-      font-size: 0.875rem;
-      margin: 0 0.75rem;
-    }
-
-    .page-btn {
-      background: var(--surface2);
-      border: 1px solid var(--border);
-      color: var(--text);
-      border-radius: 6px;
-      padding: 0.35rem 0.65rem;
-      cursor: pointer;
-      font-size: 0.8125rem;
-      min-width: 2rem;
-    }
-
-    .page-btn:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
-    .page-btn.active { background: var(--accent); border-color: var(--accent); color: #fff; }
-    .page-btn:disabled { opacity: 0.4; cursor: not-allowed; }
-
-    .loading-text { color: var(--muted); }
-
-    @media (max-width: 768px) {
-      .filters { grid-template-columns: 1fr 1fr; }
-      .search-wide { grid-column: 1 / -1; }
-    }
-  </style>
+  <meta name="description" content="ARK 官方服务器列表 — 支持中文搜索、筛选与分页浏览">
+  <title>ARK 服务器列表</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <header>
-    <h1>ARK 服务器搜索与筛选</h1>
-    <p>从同目录自动加载 servers.json，每页 20 条，支持全文搜索与筛选</p>
-  </header>
+  <div class="bg-mesh"></div>
 
-  <div class="container">
-    <div class="load-zone loaded" id="loadZone">
-      <div class="file-meta">
-        <span class="loading-text" id="loadStatus">正在加载 servers.json…</span>
+  <div class="app">
+    <header class="hero">
+      <div class="hero-top">
+        <div>
+          <h1 class="hero-title">ARK 服务器列表</h1>
+          <p class="hero-sub">浏览、搜索与筛选官方服务器 · 自动加载数据 · 每页 20 条</p>
+        </div>
+        <div class="status-pill">
+          <span class="status-dot" id="statusDot"></span>
+          <span id="statusText">正在初始化…</span>
+        </div>
       </div>
-    </div>
+
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-label">服务器总数</div>
+          <div class="stat-value accent" id="statTotal">—</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">PVE 服务器</div>
+          <div class="stat-value pve" id="statPve">—</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">PVP 服务器</div>
+          <div class="stat-value pvp" id="statPvp">—</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">当前匹配</div>
+          <div class="stat-value" id="statMatch">—</div>
+        </div>
+      </div>
+    </header>
 
     <div id="mainPanel" class="hidden">
-      <div class="filters">
-        <div class="filter-group search-wide">
-          <label for="searchText">全文搜索</label>
-          <input type="text" id="searchText" placeholder="搜索服务器名、IP、地图、集群 ID…">
+      <section class="panel">
+        <div class="search-bar">
+          <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+          </svg>
+          <input type="search" class="search-input" id="searchText"
+            placeholder="搜索服务器名称、IP、地图（支持中文，如「孤岛」「仙境」）…" autocomplete="off">
         </div>
-        <div class="filter-group">
-          <label for="filterMap">地图</label>
-          <select id="filterMap"><option value="">全部地图</option></select>
+
+        <button class="filter-toggle" id="filterToggle" type="button">
+          <span>高级筛选</span>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="m6 9 6 6 6-6"/>
+          </svg>
+        </button>
+
+        <div class="filters-body" id="filtersBody">
+          <div class="field">
+            <label for="filterMap">地图</label>
+            <select id="filterMap"><option value="">全部地图</option></select>
+          </div>
+          <div class="field">
+            <label for="filterMode">游戏模式</label>
+            <select id="filterMode">
+              <option value="">全部模式</option>
+              <option value="pve">PVE（PvE）</option>
+              <option value="pvp">PVP（PvP）</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="filterPassword">密码保护</label>
+            <select id="filterPassword">
+              <option value="">不限</option>
+              <option value="no">无密码</option>
+              <option value="yes">有密码</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="filterCluster">集群</label>
+            <select id="filterCluster"><option value="">全部集群</option></select>
+          </div>
+          <div class="field">
+            <label for="filterPlatform">支持平台</label>
+            <select id="filterPlatform"><option value="">全部平台</option></select>
+          </div>
+          <div class="field">
+            <label for="filterBuild">游戏版本</label>
+            <select id="filterBuild"><option value="">全部版本</option></select>
+          </div>
+          <div class="field">
+            <label for="minPlayers">最少在线人数</label>
+            <input type="number" id="minPlayers" min="0" placeholder="0">
+          </div>
+          <div class="field">
+            <label for="maxPing">最大延迟 (ms)</label>
+            <input type="number" id="maxPing" min="0" placeholder="不限">
+          </div>
+          <div class="field">
+            <label for="minSlots">最少空余位</label>
+            <input type="number" id="minSlots" min="0" placeholder="0">
+          </div>
+          <div class="field">
+            <label for="sortSelect">排序方式</label>
+            <select id="sortSelect">
+              <option value="NumPlayers:-1">在线人数 ↓</option>
+              <option value="NumPlayers:1">在线人数 ↑</option>
+              <option value="ServerPing:1">延迟 ↑</option>
+              <option value="ServerPing:-1">延迟 ↓</option>
+              <option value="SessionName:1">名称 A→Z</option>
+              <option value="MapName:1">地图 A→Z</option>
+            </select>
+          </div>
         </div>
-        <div class="filter-group">
-          <label for="filterMode">模式</label>
-          <select id="filterMode">
-            <option value="">全部</option>
-            <option value="pve">PVE</option>
-            <option value="pvp">PVP</option>
-          </select>
-        </div>
-        <div class="filter-group">
-          <label for="filterPassword">密码</label>
-          <select id="filterPassword">
-            <option value="">不限</option>
-            <option value="no">无密码</option>
-            <option value="yes">有密码</option>
-          </select>
-        </div>
-        <div class="filter-group">
-          <label for="filterCluster">集群</label>
-          <select id="filterCluster"><option value="">全部集群</option></select>
-        </div>
-        <div class="filter-group">
-          <label for="filterPlatform">平台</label>
-          <select id="filterPlatform"><option value="">全部平台</option></select>
-        </div>
-        <div class="filter-group">
-          <label for="minPlayers">最少在线</label>
-          <input type="number" id="minPlayers" min="0" placeholder="0">
-        </div>
-        <div class="filter-group">
-          <label for="maxPing">最大延迟 (ms)</label>
-          <input type="number" id="maxPing" min="0" placeholder="不限">
-        </div>
-        <div class="filter-group">
-          <label for="minSlots">最少空位</label>
-          <input type="number" id="minSlots" min="0" placeholder="0">
-        </div>
-        <div class="filter-group">
-          <label for="filterBuild">版本 BuildId</label>
-          <select id="filterBuild"><option value="">全部版本</option></select>
-        </div>
-      </div>
+      </section>
 
       <div class="toolbar">
-        <span class="result-count" id="resultCount">显示 0 / 0 台服务器</span>
-        <div style="display:flex;gap:0.5rem;flex-wrap:wrap;">
-          <button class="btn secondary" id="resetFilters">重置筛选</button>
-          <button class="btn secondary" id="exportCsv">导出 CSV</button>
-          <button class="btn secondary" id="reloadFile">刷新数据</button>
+        <span class="result-text" id="resultText">—</span>
+        <div class="btn-group">
+          <button class="btn btn-ghost" id="resetBtn" type="button">重置筛选</button>
+          <button class="btn btn-ghost" id="exportBtn" type="button">导出 CSV</button>
+          <button class="btn btn-primary" id="reloadBtn" type="button">刷新数据</button>
         </div>
       </div>
 
-      <div class="table-wrap">
-        <table>
-          <thead>
-            <tr>
-              <th data-col="SessionName">服务器名<span class="sort-icon">↕</span></th>
-              <th data-col="MapName">地图<span class="sort-icon">↕</span></th>
-              <th data-col="SessionIsPve">模式<span class="sort-icon">↕</span></th>
-              <th data-col="NumPlayers">在线<span class="sort-icon">↕</span></th>
-              <th data-col="ServerPing">延迟<span class="sort-icon">↕</span></th>
-              <th data-col="IP">IP<span class="sort-icon">↕</span></th>
-              <th data-col="Port">端口<span class="sort-icon">↕</span></th>
-              <th>详情</th>
-            </tr>
-          </thead>
-          <tbody id="tableBody"></tbody>
-        </table>
-      </div>
-
-      <div class="pagination" id="pagination"></div>
+      <div class="server-list" id="serverList"></div>
+      <nav class="pagination hidden" id="pagination" aria-label="分页导航"></nav>
     </div>
   </div>
 
-  <dialog id="detailDialog">
-    <div class="dialog-header">
-      <strong id="detailTitle">服务器详情</strong>
-      <button class="btn secondary" id="closeDetail">关闭</button>
+  <div class="modal-overlay" id="modal">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+      <div class="modal-header">
+        <h2 class="modal-title" id="modalTitle">服务器详情</h2>
+        <button class="btn btn-ghost" id="closeModal" type="button">关闭</button>
+      </div>
+      <div class="modal-body">
+        <dl class="detail-grid" id="detailGrid"></dl>
+      </div>
     </div>
-    <div class="dialog-body">
-      <dl class="detail-grid" id="detailGrid"></dl>
-    </div>
-  </dialog>
+  </div>
 
-  <script>
-    const PAGE_SIZE = 20;
-    const JSON_FILE = "servers.json";
+  <div class="toast" id="toast"></div>
 
-    let allServers = [];
-    let filtered = [];
-    let sortCol = "NumPlayers";
-    let sortDir = -1;
-    let currentPage = 1;
-
-    const $ = (id) => document.getElementById(id);
-
-    function getJsonUrl() {
-      return new URL(JSON_FILE, window.location.href).href;
-    }
-
-    function parseServers(raw) {
-      const data = JSON.parse(raw);
-      if (Array.isArray(data)) return data;
-      if (data && typeof data === "object") return [data];
-      throw new Error("JSON 格式无效：需要对象数组");
-    }
-
-    function uniqueSorted(arr, key) {
-      return [...new Set(arr.map((s) => s[key]).filter((v) => v != null && v !== ""))].sort((a, b) =>
-        String(a).localeCompare(String(b), "zh-CN")
-      );
-    }
-
-    function fillSelect(select, values, allLabel) {
-      select.innerHTML = `<option value="">${allLabel}</option>`;
-      values.forEach((v) => {
-        const opt = document.createElement("option");
-        opt.value = v;
-        opt.textContent = v;
-        select.appendChild(opt);
-      });
-    }
-
-    function populateFilters(servers) {
-      fillSelect($("filterMap"), uniqueSorted(servers, "MapName"), "全部地图");
-      fillSelect($("filterCluster"), uniqueSorted(servers, "ClusterId"), "全部集群");
-      fillSelect($("filterPlatform"), uniqueSorted(servers, "PlatformType"), "全部平台");
-      fillSelect($("filterBuild"), uniqueSorted(servers, "BuildId"), "全部版本");
-    }
-
-    function serverMatchesSearch(server, q) {
-      if (!q) return true;
-      const lower = q.toLowerCase();
-      return Object.values(server).some((v) => String(v).toLowerCase().includes(lower));
-    }
-
-    function applyFilters() {
-      const q = $("searchText").value.trim();
-      const map = $("filterMap").value;
-      const mode = $("filterMode").value;
-      const password = $("filterPassword").value;
-      const cluster = $("filterCluster").value;
-      const platform = $("filterPlatform").value;
-      const build = $("filterBuild").value;
-      const minPlayers = $("minPlayers").value === "" ? null : Number($("minPlayers").value);
-      const maxPing = $("maxPing").value === "" ? null : Number($("maxPing").value);
-      const minSlots = $("minSlots").value === "" ? null : Number($("minSlots").value);
-
-      filtered = allServers.filter((s) => {
-        if (!serverMatchesSearch(s, q)) return false;
-        if (map && s.MapName !== map) return false;
-        if (mode === "pve" && Number(s.SessionIsPve) !== 1) return false;
-        if (mode === "pvp" && Number(s.SessionIsPve) !== 0) return false;
-        if (password === "yes" && !s.HasPassword) return false;
-        if (password === "no" && s.HasPassword) return false;
-        if (cluster && s.ClusterId !== cluster) return false;
-        if (platform && s.PlatformType !== platform) return false;
-        if (build && String(s.BuildId) !== build) return false;
-        if (minPlayers != null && Number(s.NumPlayers) < minPlayers) return false;
-        if (maxPing != null && Number(s.ServerPing) > maxPing) return false;
-        if (minSlots != null) {
-          const slots = Number(s.MaxPlayers) - Number(s.NumPlayers);
-          if (slots < minSlots) return false;
-        }
-        return true;
-      });
-
-      currentPage = 1;
-      sortData();
-      renderTable();
-    }
-
-    function sortData() {
-      filtered.sort((a, b) => {
-        let va = a[sortCol];
-        let vb = b[sortCol];
-        if (sortCol === "SessionIsPve") {
-          va = Number(va);
-          vb = Number(vb);
-        } else if (["NumPlayers", "MaxPlayers", "ServerPing", "Port", "BuildId"].includes(sortCol)) {
-          va = Number(va) || 0;
-          vb = Number(vb) || 0;
-        } else {
-          va = String(va ?? "").toLowerCase();
-          vb = String(vb ?? "").toLowerCase();
-        }
-        if (va < vb) return -1 * sortDir;
-        if (va > vb) return 1 * sortDir;
-        return 0;
-      });
-    }
-
-    function pingClass(ping) {
-      if (ping <= 100) return "ping-good";
-      if (ping <= 200) return "ping-mid";
-      return "ping-bad";
-    }
-
-    function escapeHtml(str) {
-      return String(str)
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;");
-    }
-
-    function getTotalPages() {
-      return Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
-    }
-
-    function getPageSlice() {
-      const start = (currentPage - 1) * PAGE_SIZE;
-      return filtered.slice(start, start + PAGE_SIZE);
-    }
-
-    function renderPagination() {
-      const totalPages = getTotalPages();
-      if (currentPage > totalPages) currentPage = totalPages;
-
-      const start = filtered.length === 0 ? 0 : (currentPage - 1) * PAGE_SIZE + 1;
-      const end = Math.min(currentPage * PAGE_SIZE, filtered.length);
-      const pag = $("pagination");
-
-      if (filtered.length === 0) {
-        pag.innerHTML = "";
-        pag.classList.add("hidden");
-        return;
-      }
-
-      pag.classList.remove("hidden");
-
-      const pages = [];
-      const windowSize = 5;
-      let startPage = Math.max(1, currentPage - Math.floor(windowSize / 2));
-      let endPage = Math.min(totalPages, startPage + windowSize - 1);
-      startPage = Math.max(1, endPage - windowSize + 1);
-
-      for (let p = startPage; p <= endPage; p++) pages.push(p);
-
-      pag.innerHTML = `
-        <button class="page-btn" data-action="first" ${currentPage === 1 ? "disabled" : ""}>«</button>
-        <button class="page-btn" data-action="prev" ${currentPage === 1 ? "disabled" : ""}>‹</button>
-        ${pages.map((p) => `<button class="page-btn${p === currentPage ? " active" : ""}" data-page="${p}">${p}</button>`).join("")}
-        <button class="page-btn" data-action="next" ${currentPage === totalPages ? "disabled" : ""}>›</button>
-        <button class="page-btn" data-action="last" ${currentPage === totalPages ? "disabled" : ""}>»</button>
-        <span class="page-info">第 ${start}-${end} 条，共 ${filtered.length.toLocaleString()} 条 · 第 ${currentPage}/${totalPages} 页</span>
-      `;
-    }
-
-    function goToPage(page) {
-      currentPage = Math.min(Math.max(1, page), getTotalPages());
-      renderTable();
-    }
-
-    function renderTable() {
-      const tbody = $("tableBody");
-      const pageItems = getPageSlice();
-      const globalStart = (currentPage - 1) * PAGE_SIZE;
-
-      if (filtered.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="8" class="empty-state">没有匹配的服务器，请调整筛选条件</td></tr>`;
-      } else {
-        tbody.innerHTML = pageItems
-          .map((s, i) => {
-            const globalIdx = globalStart + i;
-            const isPve = Number(s.SessionIsPve) === 1;
-            const pct = s.MaxPlayers ? (Number(s.NumPlayers) / Number(s.MaxPlayers)) * 100 : 0;
-            const name = s.SessionName || s.Name || "—";
-            return `<tr>
-              <td title="${escapeHtml(name)}">${escapeHtml(name)}${s.HasPassword ? ' <span class="badge lock">🔒</span>' : ""}</td>
-              <td>${escapeHtml(s.MapName || "—")}</td>
-              <td><span class="badge ${isPve ? "pve" : "pvp"}">${isPve ? "PVE" : "PVP"}</span></td>
-              <td>
-                <span class="players-bar">
-                  ${s.NumPlayers}/${s.MaxPlayers}
-                  <span class="bar"><span class="fill" style="width:${Math.min(pct, 100)}%"></span></span>
-                </span>
-              </td>
-              <td class="${pingClass(Number(s.ServerPing))}">${s.ServerPing ?? "—"} ms</td>
-              <td>${escapeHtml(s.IP || "—")}</td>
-              <td>${s.Port ?? "—"}</td>
-              <td><button class="detail-btn" data-idx="${globalIdx}">查看</button></td>
-            </tr>`;
-          })
-          .join("");
-      }
-
-      $("resultCount").textContent = `匹配 ${filtered.length.toLocaleString()} / 总计 ${allServers.length.toLocaleString()} 台 · 每页 ${PAGE_SIZE} 条`;
-
-      document.querySelectorAll("th[data-col]").forEach((th) => {
-        th.classList.toggle("sorted", th.dataset.col === sortCol);
-        const icon = th.querySelector(".sort-icon");
-        if (th.dataset.col === sortCol) {
-          icon.textContent = sortDir === 1 ? "↑" : "↓";
-        } else {
-          icon.textContent = "↕";
-        }
-      });
-
-      renderPagination();
-    }
-
-    function showDetail(index) {
-      const s = filtered[index];
-      $("detailTitle").textContent = s.SessionName || s.Name || "服务器详情";
-      const keys = Object.keys(s).sort();
-      $("detailGrid").innerHTML = keys
-        .map((k) => `<dt>${escapeHtml(k)}</dt><dd>${escapeHtml(s[k])}</dd>`)
-        .join("");
-      $("detailDialog").showModal();
-    }
-
-    function exportCsv() {
-      if (filtered.length === 0) return;
-      const keys = [...new Set(filtered.flatMap((s) => Object.keys(s)))];
-      const rows = [keys.join(",")];
-      filtered.forEach((s) => {
-        rows.push(
-          keys
-            .map((k) => {
-              const v = s[k] ?? "";
-              const str = String(v).replace(/"/g, '""');
-              return /[",\n]/.test(str) ? `"${str}"` : str;
-            })
-            .join(",")
-        );
-      });
-      const blob = new Blob(["\ufeff" + rows.join("\n")], { type: "text/csv;charset=utf-8" });
-      const a = document.createElement("a");
-      a.href = URL.createObjectURL(blob);
-      a.download = `servers-filtered-${Date.now()}.csv`;
-      a.click();
-      URL.revokeObjectURL(a.href);
-    }
-
-    function onDataLoaded(raw) {
-      allServers = parseServers(raw);
-      currentPage = 1;
-      populateFilters(allServers);
-
-      $("loadStatus").innerHTML = `
-        <strong>${JSON_FILE}</strong>
-        <span class="stat">共 ${allServers.length.toLocaleString()} 台服务器</span>
-      `;
-
-      $("mainPanel").classList.remove("hidden");
-      applyFilters();
-    }
-
-    async function autoLoadServers() {
-      const status = $("loadStatus");
-      status.textContent = "正在加载 servers.json…";
-      $("mainPanel").classList.add("hidden");
-
-      try {
-        const res = await fetch(getJsonUrl(), { cache: "no-store" });
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        onDataLoaded(await res.text());
-      } catch (err) {
-        status.innerHTML = `<span style="color: var(--pvp);">加载失败：${escapeHtml(err.message)}。请确认仓库根目录已包含 servers.json。</span>`;
-      }
-    }
-
-    function resetFilters() {
-      $("searchText").value = "";
-      $("filterMap").value = "";
-      $("filterMode").value = "";
-      $("filterPassword").value = "";
-      $("filterCluster").value = "";
-      $("filterPlatform").value = "";
-      $("filterBuild").value = "";
-      $("minPlayers").value = "";
-      $("maxPing").value = "";
-      $("minSlots").value = "";
-      applyFilters();
-    }
-
-    $("reloadFile").addEventListener("click", autoLoadServers);
-
-    ["searchText", "filterMap", "filterMode", "filterPassword", "filterCluster", "filterPlatform", "filterBuild", "minPlayers", "maxPing", "minSlots"].forEach((id) => {
-      const el = $(id);
-      el.addEventListener("input", applyFilters);
-      el.addEventListener("change", applyFilters);
-    });
-
-    document.querySelector("thead").addEventListener("click", (e) => {
-      const th = e.target.closest("th[data-col]");
-      if (!th) return;
-      const col = th.dataset.col;
-      if (sortCol === col) sortDir *= -1;
-      else {
-        sortCol = col;
-        sortDir = col === "SessionName" || col === "MapName" || col === "IP" ? 1 : -1;
-      }
-      currentPage = 1;
-      sortData();
-      renderTable();
-    });
-
-    $("pagination").addEventListener("click", (e) => {
-      const btn = e.target.closest(".page-btn");
-      if (!btn || btn.disabled) return;
-      if (btn.dataset.page) {
-        goToPage(Number(btn.dataset.page));
-        return;
-      }
-      const totalPages = getTotalPages();
-      if (btn.dataset.action === "first") goToPage(1);
-      else if (btn.dataset.action === "prev") goToPage(currentPage - 1);
-      else if (btn.dataset.action === "next") goToPage(currentPage + 1);
-      else if (btn.dataset.action === "last") goToPage(totalPages);
-    });
-
-    $("tableBody").addEventListener("click", (e) => {
-      const btn = e.target.closest(".detail-btn");
-      if (btn) showDetail(Number(btn.dataset.idx));
-    });
-
-    $("closeDetail").addEventListener("click", () => $("detailDialog").close());
-    $("resetFilters").addEventListener("click", resetFilters);
-    $("exportCsv").addEventListener("click", exportCsv);
-
-    autoLoadServers();
-  </script>
+  <script src="app.js"></script>
 </body>
 </html>
