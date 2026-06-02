@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ASA 非官方服务器浏览器 (高性能版)</title>
+    <style>
+        /* 现代游戏风格暗黑配色 */
+        :root {
+            --bg-color: #0f172a;
+            --card-bg: #1e293b;
+            --accent-color: #f97316;
+            --accent-hover: #ea580c;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --border-color: #334155;
+            --pve-color: #10b981;
+            --pvp-color: #ef4444;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            padding: 20px;
+            line-height: 1.5;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        header {
+            margin-bottom: 25px;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 20px;
+        }
+
+        header h1 {
+            font-size: 1.8rem;
+            color: var(--accent-color);
+            margin-bottom: 5px;
+        }
+
+        header p {
+            color: var(--text-muted);
+            font-size: 0.9rem;
+        }
+
+        /* 筛选控制面板面 */
+        .controls-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 15px;
+            background-color: var(--card-bg);
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border: 1px solid var(--border-color);
+        }
+
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .control-group label {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            font-weight: 600;
+        }
+
+        .control-group input, .control-group select {
+            background-color: var(--bg-color);
+            border: 1px solid var(--border-color);
+            color: var(--text-main);
+            padding: 10px 12px;
+            border-radius: 6px;
+            font-size: 0.95rem;
+            outline: none;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+
+        .control-group input:focus, .control-group select:focus {
+            border-color: var(--accent-color);
+            box-shadow: 0 0 0 2px rgba(249, 115, 22, 0.2);
+        }
+
+        /* 数据状态条 */
+        .stats-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            font-size: 0.9rem;
+            color: var(--text-muted);
+            background-color: rgba(30, 41, 59, 0.5);
+            padding: 10px 15px;
+            border-radius: 6px;
+            border: 1px solid rgba(51, 65, 85, 0.5);
+        }
+
+        .btn-refresh {
+            background-color: var(--accent-color);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: background 0.2s;
+        }
+
+        .btn-refresh:hover {
+            background-color: var(--accent-hover);
+        }
+
+        /* 数据表格容器 */
+        .table-container {
+            background-color: var(--card-bg);
+            border-radius: 8px;
+            overflow-x: auto;
+            border: 1px solid var(--border-color);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+            font-size: 0.95rem;
+        }
+
+        th, td {
+            padding: 14px 16px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        th {
+            background-color: rgba(15, 23, 42, 0.6);
+            color: var(--text-muted);
+            font-weight: 600;
+            font-size: 0.85rem;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+        }
+
+        tr:last-child td {
+            border-bottom: none;
+        }
+
+        tr:hover td {
+            background-color: rgba(255, 255, 255, 0.015);
+        }
+
+        /* 标签与特定样式 */
+        .badge {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            display: inline-block;
+        }
+
+        .badge-pve {
+            background-color: rgba(16, 185, 129, 0.12);
+            color: var(--pve-color);
+            border: 1px solid rgba(16, 185, 129, 0.25);
+        }
+
+        .badge-pvp {
+            background-color: rgba(239, 68, 68, 0.12);
+            color: var(--pvp-color);
+            border: 1px solid rgba(239, 68, 68, 0.25);
+        }
+
+        .badge-map {
+            background-color: rgba(148, 163, 184, 0.08);
+            color: #cbd5e1;
+            border: 1px solid var(--border-color);
+        }
+
+        .server-name {
+            font-weight: 600;
+            color: var(--text-main);
+            margin-bottom: 4px;
+            word-break: break-all;
+        }
+
+        .server-details {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .ping-good { color: #10b981; }
+        .ping-medium { color: #f59e0b; }
+        .ping-bad { color: #ef4444; }
+
+        /* 延迟加载（加载更多）按钮 */
+        .load-more-container {
+            text-align: center;
+            margin: 25px 0 40px 0;
+        }
+
+        .btn-load-more {
+            background-color: transparent;
+            color: var(--accent-color);
+            border: 2px solid var(--accent-color);
+            padding: 10px 28px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.95rem;
+            transition: all 0.2s;
+        }
+
+        .btn-load-more:hover {
+            background-color: var(--accent-color);
+            color: white;
+        }
+
+        /* 状态提示 */
+        .state-message {
+            text-align: center;
+            padding: 50px;
+            color: var(--text-muted);
+            font-size: 1.1rem;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <h1>方舟：生存升华 (ASA) 非官方服务器浏览器</h1>
+        <p>数据源自 GitHub Actions 自动化定时同步更新 (每小时)</p>
+    </header>
+
+    <!-- 筛选控制面板 -->
+    <div class="controls-grid">
+        <div class="control-group">
+            <label for="searchInput">服务器名称搜索</label>
+            <input type="text" id="searchInput" placeholder="输入关键字模糊搜索...">
+        </div>
+        <div class="control-group">
+            <label for="mapFilter">地图过滤</label>
+            <select id="mapFilter">
+                <option value="all">所有地图</option>
+                <!-- 动态生成 -->
+            </select>
+        </div>
+        <div class="control-group">
+            <label for="modeFilter">游戏模式</label>
+            <select id="modeFilter">
+                <option value="all">所有模式 (PvE/PvP)</option>
+                <option value="pve">仅限 仅限 PvE</option>
+                <option value="pvp">仅限 仅限 PvP</option>
+            </select>
+        </div>
+        <div class="control-group">
+            <label for="sortSelect">数据排序</label>
+            <select id="sortSelect">
+                <option value="players_desc">玩家人数 (由多到少)</option>
+                <option value="ping_asc">延迟 Ping (由低到高)</option>
+                <option value="name_asc">服务器名称 (A-Z)</option>
+            </select>
+        </div>
+    </div>
+
+    <!-- 状态条 -->
+    <div class="stats-bar">
+        <div>
+            <span id="matchCount">正在初始化...</span>
+        </div>
+        <button class="btn-refresh" onclick="fetchServerData()">手动刷新</button>
+    </div>
+
+    <!-- 表格区域 -->
+    <div class="table-container">
+        <table id="serverTable">
+            <thead>
+                <tr>
+                    <th style="width: 45%;">服务器信息</th>
+                    <th style="width: 15%;">地图</th>
+                    <th style="width: 12%;">模式</th>
+                    <th style="width: 15%;">在线人数</th>
+                    <th style="width: 13%;">延迟 (Ping)</th>
+                </tr>
+            </thead>
+            <tbody id="tableBody">
+                <!-- 动态渲染 -->
+            </tbody>
+        </table>
+        <div id="stateMessage" class="state-message hidden"></div>
+    </div>
+
+    <!-- 加载更多 -->
+    <div class="load-more-container">
+        <button id="loadMoreBtn" class="btn-load-more hidden" onclick="loadMore()">加载更多服务器</button>
+    </div>
+</div>
+
+<script>
+    // 核心全局状态
+    let allServers = [];       // 原始未经过滤的完整数据
+    let filteredServers = [];  // 经过筛选与排序后的数据
+    let displayedCount = 0;    // 当前已渲染到 DOM 中的条数
+    const PAGE_SIZE = 60;      // 每一页（每次加载）渲染的数量，防卡顿
+
+    // 页面加载完毕执行
+    document.addEventListener('DOMContentLoaded', () => {
+        fetchServerData();
+        setupEventListeners();
+    });
+
+    // 绑定事件（带高性能防抖机制）
+    function setupEventListeners() {
+        const searchInput = document.getElementById('searchInput');
+        const mapFilter = document.getElementById('mapFilter');
+        const modeFilter = document.getElementById('modeFilter');
+        const sortSelect = document.getElementById('sortSelect');
+
+        // 搜索框防抖处理：避免每打一个字就遍历上万条数据造成卡顿
+        searchInput.addEventListener('input', debounce(() => {
+            processFilterAndSort();
+        }, 250));
+
+        // 下拉框改变即时过滤
+        mapFilter.addEventListener('change', processFilterAndSort);
+        modeFilter.addEventListener('change', processFilterAndSort);
+        sortSelect.addEventListener('change', processFilterAndSort);
+    }
+
+    // 高性能数据获取
+    async function fetchServerData() {
+        showStateMessage('正在从本地资源加载海量服务器数据...');
+        document.getElementById('loadMoreBtn').classList.add('hidden');
+        document.getElementById('tableBody').innerHTML = '';
+
+        try {
+            // 请求同目录下的 servers.json 静态文件（避免浏览器直接跨域报错）
+            const response = await fetch('./servers.json');
+            if (!response.ok) throw new Error(`HTTP 错误! 状态码: ${response.status}`);
+            
+            allServers = await response.json();
+            
+            // 1. 动态分析服务器列表里所有的唯一地图并生成下拉选项
+            populateMapFilter();
+            
+            // 2. 执行一次全量数据筛选与排序
+            processFilterAndSort();
+            
+        } catch (error) {
+            console.error('获取数据失败:', error);
+            showStateMessage('数据加载失败！请确认您已通过 GitHub Actions 成功生成了 servers.json，或者检查本地网络。', true);
+        }
+    }
+
+    // 动态提取地图列表
+    function populateMapFilter() {
+        const mapFilter = document.getElementById('mapFilter');
+        // 保留原有的"所有地图"
+        mapFilter.innerHTML = '<option value="all">所有地图</option>';
+        
+        // 提取去重后的所有地图名
+        const maps = new Set();
+        allServers.forEach(s => {
+            if (s.MapName) maps.add(s.MapName);
+        });
+
+        // 排序并填入下拉菜单
+        Array.from(maps).sort().forEach(mapName => {
+            const opt = document.createElement('option');
+            opt.value = mapName;
+            opt.textContent = mapName.replace('_WP', ''); // 移除官方WP后缀使排版更美观
+            mapFilter.appendChild(opt);
+        });
+    }
+
+    // 核心过滤器与排序器 (纯数据处理，不操作DOM，速度极快)
+    function processFilterAndSort() {
+        const searchVal = document.getElementById('searchInput').value.toLowerCase().trim();
+        const mapVal = document.getElementById('mapFilter').value;
+        const modeVal = document.getElementById('modeFilter').value;
+        const sortVal = document.getElementById('sortSelect').value;
+
+        // 1. 过滤流
+        filteredServers = allServers.filter(server => {
+            // 名称模糊匹配
+            const nameMatch = !searchVal || (server.SessionName && server.SessionName.toLowerCase().includes(searchVal));
+            
+            // 地图严格匹配
+            const mapMatch = mapVal === 'all' || server.MapName === mapVal;
+            
+            // PVE/PVP 匹配 (SessionIsPve 1=PVE, 0=PVP)
+            let modeMatch = true;
+            if (modeVal === 'pve') modeMatch = server.SessionIsPve === 1;
+            if (modeVal === 'pvp') modeMatch = server.SessionIsPve === 0;
+
+            return nameMatch && mapMatch && modeMatch;
+        });
+
+        // 2. 排序流
+        if (sortVal === 'players_desc') {
+            filteredServers.sort((a, b) => (b.NumPlayers || 0) - (a.NumPlayers || 0));
+        } else if (sortVal === 'ping_asc') {
+            filteredServers.sort((a, b) => (a.ServerPing || 999) - (b.ServerPing || 999));
+        } else if (sortVal === 'name_asc') {
+            filteredServers.sort((a, b) => (a.SessionName || '').localeCompare(b.SessionName || ''));
+        }
+
+        // 3. 重置分批渲染状态
+        displayedCount = 0;
+        document.getElementById('tableBody').innerHTML = '';
+        
+        if (filteredServers.length === 0) {
+            showStateMessage('没有找到符合筛选条件的服务器。');
+            document.getElementById('matchCount').textContent = `共找到 0 个结果`;
+            document.getElementById('loadMoreBtn').classList.add('hidden');
+        } else {
+            hideStateMessage();
+            document.getElementById('matchCount').textContent = `当前筛选条件下共找到 ${filteredServers.length} 个服务器`;
+            loadMore(); // 加载第一批数据
+        }
+    }
+
+    // 分批次渲染 DOM 的函数（高性能防卡顿的核心）
+    function loadMore() {
+        const tbody = document.getElementById('tableBody');
+        const nextBatchEnd = Math.min(displayedCount + PAGE_SIZE, filteredServers.length);
+        
+        // 使用 DocumentFragment 在内存中构建 DOM 树，减少浏览器的回流与重绘
+        const fragment = document.createDocumentFragment();
+
+        for (let i = displayedCount; i < nextBatchEnd; i++) {
+            const server = filteredServers[i];
+            const tr = document.createElement('tr');
+            
+            // PVE / PVP 状态标签
+            const isPve = server.SessionIsPve === 1;
+            const modeBadge = isPve 
+                ? '<span class="badge badge-pve">PvE</span>' 
+                : '<span class="badge badge-pvp">PvP</span>';
+
+            // 格式化地图名称
+            const cleanMapName = server.MapName ? server.MapName.replace('_WP', '') : '未知';
+            
+            // 延迟颜色级别
+            let pingClass = 'ping-good';
+            if (server.ServerPing > 150) pingClass = 'ping-bad';
+            else if (server.ServerPing > 80) pingClass = 'ping-medium';
+
+            tr.innerHTML = `
+                <td>
+                    <div class="server-name">${escapeHtml(server.SessionName || '未命名服务器')}</div>
+                    <div class="server-details">
+                        <span>IP: ${server.IP || '隐藏'}:${server.Port || '0'}</span>
+                        <span>版本: v${server.BuildId || '0'}.${server.MinorBuildId || '0'}</span>
+                        ${server.HasPassword ? '<span style="color:#f59e0b;">🔒 带密码</span>' : '🔓 公开'}
+                    </div>
+                </td>
+                <td><span class="badge badge-map">${cleanMapName}</span></td>
+                <td>${modeBadge}</td>
+                <td><strong style="color: var(--text-main);">${server.NumPlayers || 0}</strong> / ${server.MaxPlayers || 70}</td>
+                <td><span class="${pingClass}">${server.ServerPing || '--'} ms</span></td>
+            `;
+            fragment.appendChild(tr);
+        }
+
+        tbody.appendChild(fragment);
+        displayedCount = nextBatchEnd;
+
+        // 判断是否展示“加载更多”按钮
+        const loadMoreBtn = document.getElementById('loadMoreBtn');
+        if (displayedCount < filteredServers.length) {
+            loadMoreBtn.classList.remove('hidden');
+        } else {
+            loadMoreBtn.classList.add('hidden');
+        }
+    }
+
+    // 辅助工具：防抖动
+    function debounce(func, wait) {
+        let timeout;
+        return function (...args) {
+            clearTimeout(timeout);
+            timeout = setTimeout(() => func.apply(this, args), wait);
+        };
+    }
+
+    // 辅助工具：转义 HTML 字符串防止 XSS
+    function escapeHtml(str) {
+        return str.replace(/&/g, "&amp;")
+                  .replace(/</g, "&lt;")
+                  .replace(/>/g, "&gt;")
+                  .replace(/"/g, "&quot;")
+                  .replace(/'/g, "&#039;");
+    }
+
+    // 状态状态管理
+    function showStateMessage(msg, isError = false) {
+        const msgEl = document.getElementById('stateMessage');
+        msgEl.textContent = msg;
+        msgEl.style.color = isError ? 'var(--pvp-color)' : 'var(--text-muted)';
+        msgEl.classList.remove('hidden');
+    }
+
+    function hideStateMessage() {
+        document.getElementById('stateMessage').classList.add('hidden');
+    }
+</script>
+
+</body>
+</html>
