@@ -51,4 +51,4 @@ netsh advfirewall firewall add rule name="NATMAP_EXE_IN" dir=in action=allow pro
 
 # 3. 极简启动：让 natmap 自动识别网卡并在 8211 端口进行 STUN 打洞
 Write-Host "[执行] 正在启动 STUN 穿透 (自动绑定网卡: 8211 端口)..." -ForegroundColor Yellow
-& $exePath -s stun.miwifi.com -h qq.com -b 8211 -u
+Start-Process -FilePath $exePath -ArgumentList "-s stun.miwifi.com -h qq.com -b 0 -t 127.0.0.1 -p 8211 -u" -NoNewWindow
