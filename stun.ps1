@@ -50,4 +50,4 @@ netsh advfirewall firewall add rule name="UDP_8211_STUN" dir=in action=allow pro
 
 # 3. 动态随机本地端口打洞，并无缝转发流量给本地 8211 端口
 Write-Host "[执行] 正在连接 STUN 服务器打洞并建立转发到 8211 端口..." -ForegroundColor Yellow
-& $exePath -s stun.miwifi.com -h qq.com -b 0 -t 127.0.0.1 -p 8211 -u
+& $exePath -s stun.miwifi.com -h qq.com -b 0 -t 192.168.10.21 -p 8211 -u
