@@ -2,13 +2,14 @@
 # GitHub 一键 STUN 穿透脚本（NatMap 端口转发增强版）
 # =====================================================================
 
+$ErrorActionPreference = "Stop"
 # PowerShell 下载加速
 $ProgressPreference = "SilentlyContinue"
 
-# 检查管理员权限
-if (-not ([Security.Principal.WindowsPrincipal]
-    [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole(
-    [Security.Principal.WindowsBuiltInRole]::Administrator))
+# 检查管理员权限（兼容 Windows PowerShell 5.1）
+$IsAdmin = ([Security.Principal.WindowsPrincipal]([Security.Principal.WindowsIdentity]::GetCurrent())).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+
+if (-not $IsAdmin)
 {
     Write-Host ""
     Write-Host "====================================================" -ForegroundColor Red
@@ -123,8 +124,8 @@ Write-Host "正在配置 Windows 防火墙..." -ForegroundColor Cyan
 netsh advfirewall firewall add rule name="UDP_8211_IN" dir=in action=allow protocol=UDP localport=8211 *> $null
 netsh advfirewall firewall add rule name="UDP_8211_OUT" dir=out action=allow protocol=UDP localport=8211 *> $null
 
-netsh advfirewall firewall add rule name="NATMAP_IN" dir=in action=allow program="$exePath" action=allow *> $null
-netsh advfirewall firewall add rule name="NATMAP_OUT" dir=out action=allow program="$exePath" action=allow *> $null
+netsh advfirewall firewall add rule name="NATMAP_IN" dir=in program="$exePath" action=allow *> $null
+netsh advfirewall firewall add rule name="NATMAP_OUT" dir=out program="$exePath" action=allow *> $null
 
 Write-Host "[成功] 防火墙配置完成。" -ForegroundColor Green
 
