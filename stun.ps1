@@ -1,15 +1,19 @@
-# 0. 启动前清理残留的 natmap 进程
-Stop-Process -Name "natmap" -Force -ErrorAction SilentlyContinue
+# =====================================================================
+# GitHub 一键 STUN 穿透脚本 (Natmap 端口转发无冲突版)
+# =====================================================================
+
+# 0. 启动前强行清理残留的 natmap 进程，防止端口与死锁
+Get-Process -Name "natmap" -ErrorAction SilentlyContinue | Stop-Process -Force
 
 $installDir = "C:\NatmapTool"
-$exePath = "$installDir\natmap.exe"
-$zipPath = "$installDir\natmap.zip"
+$exePath = "C:\NatmapTool\natmap.exe"
+$zipPath = "C:\NatmapTool\natmap.zip"
 
 if (!(Test-Path $installDir)) {
     New-Item -ItemType Directory -Force -Path $installDir > $null
 }
 
-# 1. 检查本地程序文件
+# 1. 检查本地程序文件，不存在则引导下载
 if (Test-Path $exePath) {
     Write-Host "[成功] 检测到本地已存在程序，跳过下载！" -ForegroundColor Green
 } else {
@@ -44,11 +48,11 @@ if (Test-Path $exePath) {
     }
 }
 
-# 2. 防火墙放行规则
-Write-Host "[执行] 正在配置 Windows 防火墙放行规则..." -ForegroundColor Cyan
+# 2. 配置 Windows 防火墙（双向放行 8211 端口与主程序）
+Write-Host "[执行] 正在配置 Windows 防火墙双向放行规则..." -ForegroundColor Cyan
 netsh advfirewall firewall add rule name="UDP_8211_STUN" dir=in action=allow protocol=UDP localport=8211 >$null 2>&1
 netsh advfirewall firewall add rule name="NATMAP_EXE_IN" dir=in action=allow program="$exePath" >$null 2>&1
 
-# 3. 极简启动：让 natmap 自动识别网卡并在 8211 端口进行 STUN 打洞
-Write-Host "[执行] 正在启动 STUN 穿透 (自动绑定网卡: 8211 端口)..." -ForegroundColor Yellow
+# 3. 启动打洞并建立转发 (-b 0 随机空闲端口打洞，转发给本地 8211)
+Write-Host "[执行] 正在连接 STUN 服务器打洞并建立转发到 8211 端口..." -ForegroundColor Yellow
 Start-Process -FilePath $exePath -ArgumentList "-s stun.miwifi.com -h qq.com -b 0 -t 127.0.0.1 -p 8211 -u" -NoNewWindow
