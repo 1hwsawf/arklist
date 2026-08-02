@@ -9,7 +9,7 @@ if (!(Test-Path $installDir)) {
     New-Item -ItemType Directory -Force -Path $installDir > $null
 }
 
-# 1. 检查本地文件
+# 1. 检查本地程序文件
 if (Test-Path $exePath) {
     Write-Host "[成功] 检测到本地已存在程序，跳过下载！" -ForegroundColor Green
 } else {
@@ -44,15 +44,11 @@ if (Test-Path $exePath) {
     }
 }
 
-# 2. 关键点：配置 Windows 防火墙（双向放行端口 + 主程序进程）
+# 2. 防火墙放行规则
 Write-Host "[执行] 正在配置 Windows 防火墙放行规则..." -ForegroundColor Cyan
 netsh advfirewall firewall add rule name="UDP_8211_STUN" dir=in action=allow protocol=UDP localport=8211 >$null 2>&1
 netsh advfirewall firewall add rule name="NATMAP_EXE_IN" dir=in action=allow program="$exePath" >$null 2>&1
 
-# 3. 自动提取本机真实 IPv4 地址（修正语法错误）
-$localIP = (Get-NetIPAddress -AddressFamily IPv4 | Where-Object { $_.IPAddress -notlike "127.*" -and $_.IPAddress -notlike "169.254*" }).IPAddress[0]
-if (!$localIP) { $localIP = "192.168.10.21" }
-
-# 4. 运行 Lucky 同款模式打洞
-Write-Host "[执行] 正在启动 STUN 穿透 (绑定内网网卡 $localIP)..." -ForegroundColor Yellow
-& $exePath -s stun.miwifi.com -h qq.com -i $localIP -b 8211 -u
+# 3. 极简启动：让 natmap 自动识别网卡并在 8211 端口进行 STUN 打洞
+Write-Host "[执行] 正在启动 STUN 穿透 (自动绑定网卡: 8211 端口)..." -ForegroundColor Yellow
+& $exePath -s stun.miwifi.com -h qq.com -b 8211 -u
